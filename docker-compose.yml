@@ -2,7 +2,7 @@ services:
 
   purchasing-ai:
     build:
-      context: ./services/purchasing-ai
+      context: .
       dockerfile: Dockerfile
     container_name: purchasing-ai
     ports:
