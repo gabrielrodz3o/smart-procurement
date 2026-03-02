@@ -1,23 +1,28 @@
 services:
 
   purchasing-ai:
-    build:
-      context: ./services/purchasing-ai
-      dockerfile: Dockerfile
+    build: .
     container_name: purchasing-ai
     ports:
       - "8001:8001"
     env_file:
-      - ./services/purchasing-ai/.env
+      - .env
     environment:
+      # ── App ────────────────────────────────────────────────────────────────
       - ENVIRONMENT=production
+      # ── Database (override .env for Docker networking) ────────────────────
       - DB_HOST=${DB_HOST:-pgbouncer}
       - DB_PORT=${DB_PORT:-6432}
       - DB_DATABASE=${DB_DATABASE:-gcode}
       - DB_USER=${DB_USER:-dev_gabriel}
       - DB_PASSWORD=${DB_PASSWORD}
+      # ── OpenAI ────────────────────────────────────────────────────────────
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # ── Redis cache (optional — falls back to in-memory if not set) ───────
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      # ── Nightly scheduler ─────────────────────────────────────────────────
+      # Format: business_unit_id:location_id comma-separated
+      # Example: NIGHTLY_UNITS=16:12,17:15
       - NIGHTLY_UNITS=${NIGHTLY_UNITS:-}
     depends_on:
       redis:
@@ -31,14 +36,14 @@ services:
       start_period: 15s
     networks:
       - purchasing-net
-      - app-network
+      - db-net          # external network where pgbouncer lives
 
   redis:
     image: redis:7-alpine
     container_name: purchasing-ai-redis
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
-      - "6380:6379"
+      - "6380:6379"     # 6380 on host to avoid conflicts with existing Redis
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -51,5 +56,6 @@ services:
 networks:
   purchasing-net:
     driver: bridge
-  app-network:
-    external: true
+  db-net:
+    external: true       # attach to your existing pgbouncer/postgres network
+    name: app-network
