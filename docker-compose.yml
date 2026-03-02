@@ -1,7 +1,9 @@
 services:
 
   purchasing-ai:
-    build: .
+    build:
+      context: ./services/purchasing-ai
+      dockerfile: Dockerfile
     container_name: purchasing-ai
     ports:
       - "8001:8001"
